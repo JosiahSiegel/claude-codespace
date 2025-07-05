@@ -268,6 +268,7 @@ code --add /mnt/c/Users/YourUsername/Projects/my-app
 - Verify installation: `which claude` should return `/usr/bin/claude`
 - Check permissions: Ensure the binary is executable
 - Test basic functionality: `claude --version`
+- For corporate environments, see [Corporate VPN/Proxy Setup](#corporate-vpnproxy-setup) below
 
 ### MCP Server Connectivity
 - Context7 issues are often resolved by restarting the Roo Code extension
@@ -278,6 +279,100 @@ code --add /mnt/c/Users/YourUsername/Projects/my-app
 - Ensure proper user permissions within the DevContainer
 - Verify workspace directory access: `/workspaces/claude-codespace`
 - Check that all required tools are available in the container PATH
+
+### Corporate VPN/Proxy Setup
+
+Corporate environments with SSL interception, self-signed certificates, or restrictive proxies can prevent Claude CLI installation and authentication. This section provides workarounds and explains limitations.
+
+#### SSL Certificate Issues During Build
+
+The Dockerfile has been enhanced to handle SSL certificate issues gracefully:
+
+1. **Automatic Fallback**: If Claude CLI fails to install during build, the container will still start successfully
+2. **Installation Helper**: A helper script is available after container starts: `install-claude-helper`
+
+#### Manual Installation Options
+
+If Claude CLI installation fails during container build:
+
+**Option 1: Installation Helper Script**
+```bash
+# Run the installation helper for guided instructions
+install-claude-helper
+```
+
+**Option 2: Temporarily Disable SSL Verification** (INSECURE - development only)
+```bash
+# Disable SSL verification for NPM
+npm config set strict-ssl false
+
+# Install Claude CLI
+npm install -g @anthropic-ai/claude-code
+
+# Re-enable SSL verification
+npm config set strict-ssl true
+```
+
+**Option 3: Configure Corporate Proxy**
+```bash
+# Set proxy configuration
+npm config set proxy http://your-proxy:port
+npm config set https-proxy http://your-proxy:port
+
+# Install Claude CLI
+npm install -g @anthropic-ai/claude-code
+```
+
+**Option 4: Custom CA Certificates**
+1. Create `.devcontainer/certs/` directory
+2. Place your corporate CA certificates (*.crt files) in this directory
+3. Uncomment the certificate copying section in the Dockerfile
+4. Rebuild the container
+
+#### Authentication Limitations
+
+**⚠️ Critical Limitation**: Even if Claude CLI installs successfully, `claude login` will fail in environments with:
+- Self-signed certificates
+- Corporate SSL interception/inspection
+- Modified certificate chains
+- Man-in-the-middle proxy configurations
+
+This is an intentional security feature that cannot be bypassed. The Claude CLI requires valid SSL certificates to protect authentication tokens and ensure secure communication with Anthropic's servers.
+
+#### Why Authentication Fails
+
+1. **Security by Design**: Claude CLI validates SSL certificates to prevent token interception
+2. **No Bypass Option**: Unlike NPM's `strict-ssl`, Claude CLI has no option to disable certificate validation
+3. **Token Protection**: This ensures your authentication tokens cannot be intercepted by corporate proxies
+
+#### Workarounds for Authentication
+
+Since `claude login` cannot work in corporate SSL-intercepted environments, consider these alternatives:
+
+1. **Temporary Network Switch**:
+   - Connect to a network without SSL interception (mobile hotspot, home network)
+   - Complete `claude login` authentication
+   - Return to corporate network (the saved session will continue to work)
+
+2. **IT Department Assistance**:
+   - Request SSL inspection bypass for Anthropic domains:
+     - `claude.ai`
+     - `*.anthropic.com`
+   - This allows proper SSL certificate validation
+
+3. **Alternative Development Environment**:
+   - Use Claude CLI from a personal device
+   - Access from a cloud development environment
+   - Use a VPN that doesn't perform SSL inspection
+
+#### Environment Variables (Experimental)
+
+The Dockerfile includes comments about potential environment variables, though these are not officially supported by Claude CLI:
+```bash
+# These can be set in devcontainer.json, but may not affect Claude CLI
+NODE_TLS_REJECT_UNAUTHORIZED=0  # Affects NPM only
+CLAUDE_DISABLE_SSL_VERIFY=1     # Not currently supported by Claude CLI
+```
 
 ### Host Filesystem Access
 The DevContainer has **full host filesystem access** enabled:
