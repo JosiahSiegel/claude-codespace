@@ -1,9 +1,10 @@
 {
-  "image": "mcr.microsoft.com/devcontainers/base:jammy",
-  "features": {
-    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+  "build": {
+    "dockerfile": "Dockerfile"
   },
-  "runArgs": ["--init"],
+  "runArgs": [
+    "--init"
+  ],
   "mounts": [
     // Option 1: WSL mount access (accesses all mounted drives in WSL context) - ACTIVE
     "source=/mnt,target=/mnt,type=bind,consistency=cached"
@@ -19,6 +20,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "anthropic.claude-code",
         "rooveterinaryinc.roo-cline"
       ]
     }
