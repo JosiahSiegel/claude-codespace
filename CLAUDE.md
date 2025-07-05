@@ -4,31 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository hosts Claude Code within a DevContainer, making it available to Roo Code on the Windows host via port forwarding.
+This repository provides Claude Code CLI access within a DevContainer for use with Roo Code extension running inside the same DevContainer.
 
-## Architecture
+## Claude CLI Path
 
-Claude Code runs as an MCP server inside the DevContainer and is exposed to the Windows host:
+The Claude CLI is available at `/usr/bin/claude` inside the DevContainer.
 
+## Setup for Roo Code Extension in DevContainer
+
+**Roo Code Configuration**: Configure Roo Code extension to use:
 ```
-Windows Host (Roo Code) → Port 8947 → DevContainer → Claude Code MCP Server
+/usr/bin/claude
 ```
+
+**Installation**: Make sure Roo Code extension is installed in the DevContainer VS Code instance.
 
 ## Common Commands
 
-### Test Connection
+### Test Claude CLI
 ```bash
-curl http://localhost:8947
+claude --version
 ```
 
-### Manual Start (if needed)
+### Run Claude interactively
 ```bash
-node claude-mcp-server.js
+claude
 ```
-
-## Configuration
-
-- Claude Code MCP server starts automatically when DevContainer starts
-- Port 8947 is forwarded to Windows host
-- Roo Code connects to `http://localhost:8947`
-- Server logs are written to `/tmp/claude-mcp-server.log`

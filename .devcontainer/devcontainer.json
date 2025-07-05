@@ -4,12 +4,11 @@
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
   },
   "runArgs": ["--init"],
-  "postCreateCommand": "echo 'Claude Code optimized container ready' && nohup node /workspaces/claude-codespace/claude-mcp-server.js > /tmp/claude-mcp-server.log 2>&1 &",
-  "forwardPorts": [8947],
-  "portsAttributes": {
-    "8947": {
-      "label": "Claude Code MCP Server",
-      "onAutoForward": "notify"
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "roo-coder.roo-coder"
+      ]
     }
   }
 }
