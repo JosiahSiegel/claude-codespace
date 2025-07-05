@@ -4,10 +4,10 @@
       "command": "npx",
       "args": [
         "-y",
-        "@upstash/context7-mcp"
+        "@upstash/context7-mcp@latest"
       ],
       "env": {
-        "DEFAULT_MINIMUM_TOKENS": ""
+        "DEFAULT_MINIMUM_TOKENS": "8000"
       },
       "alwaysAllow": [
         "get-library-docs",
