@@ -120,7 +120,64 @@ claude
 
 ## Working with Host Repositories
 
-Since full host filesystem access is enabled, you can easily work on repositories located on your host system:
+Since full host filesystem access is enabled, you can easily work on repositories located on your host system. You can work with multiple repositories simultaneously in VS Code, including both the claude-codespace repo and your Windows-hosted repos.
+
+### Multi-Repository Workspace
+
+**Working with Multiple Repositories Together**
+
+You can add Windows-hosted repositories to your current VS Code workspace alongside the claude-codespace repo. This allows Roo to work seamlessly across all repositories in your workspace:
+
+**Method 1: Add Folder to Workspace**
+1. While in the DevContainer with claude-codespace open
+2. Use `File > Add Folder to Workspace...` (or `Ctrl+K Ctrl+A`)
+3. Navigate to `/mnt/c/repos/` or any host path
+4. Select your repository folder
+5. VS Code will now show both repositories in the Explorer sidebar
+6. Roo can access and work with files from both repositories
+
+**Method 2: Command Palette**
+```bash
+# In VS Code, open Command Palette (Ctrl+Shift+P)
+# Type: "Workspaces: Add Folder to Workspace"
+# Navigate to your host repository path
+```
+
+**Method 3: Save as Multi-Root Workspace**
+1. Add multiple folders as described above
+2. Use `File > Save Workspace As...`
+3. Save the workspace configuration
+4. Reopen this workspace file anytime to work with all repositories together
+
+### Example Multi-Repository Setup
+
+```
+VS Code Explorer:
+├── claude-codespace (workspace) [DevContainer]
+│   ├── .devcontainer/
+│   ├── CLAUDE.md
+│   └── ...
+├── your-app [Host: C:\repos\your-app]
+│   ├── src/
+│   ├── package.json
+│   └── ...
+└── another-project [Host: C:\Users\YourName\Projects\another-project]
+    ├── main.py
+    ├── requirements.txt
+    └── ...
+```
+
+### Benefits of Multi-Repository Workspaces
+
+1. **Unified Context**: Roo can see and understand relationships between repositories
+2. **Cross-Repository Operations**: Easy file references and operations across repos
+3. **Shared DevContainer Benefits**: All repos benefit from the DevContainer's tools and Claude CLI
+4. **Seamless Navigation**: Use VS Code's file explorer to navigate all repositories
+5. **Integrated Terminal**: Terminal commands work across all repository paths
+
+### Working with Individual Host Repositories
+
+You can also choose to work with host repositories individually:
 
 ### Quick Access Methods
 
@@ -157,14 +214,17 @@ cd /mnt/c/path/to/your/repo && code .
 
 ### Best Practices for Host Repository Work
 
-1. **Maintain Claude Authentication**: Your Claude login persists across directories
+1. **Maintain Claude Authentication**: Your Claude login persists across directories and workspaces
 2. **Use Relative Paths**: When working in host repos, use relative paths for better portability
 3. **Git Integration**: Git commands work normally on host repositories
 4. **File Permissions**: Changes made in the container are reflected on the host immediately
 5. **Extension Compatibility**: Roo Code and other VS Code extensions work seamlessly with host files
+6. **Multi-Repository Context**: When working with multiple repos, Roo automatically understands the context of each repository
+7. **Workspace Persistence**: Save multi-root workspaces to quickly resume work on multiple projects
 
-### Example Workflow
+### Example Workflows
 
+**Single Repository Workflow:**
 ```bash
 # 1. Navigate to your host project
 cd /mnt/c/Users/YourUsername/Projects/my-web-app
@@ -179,13 +239,28 @@ claude
 code .
 ```
 
+**Multi-Repository Workflow:**
+```bash
+# 1. Start in the DevContainer with claude-codespace
+cd /workspaces/claude-codespace
+
+# 2. Add a host repository to workspace via terminal
+code --add /mnt/c/repos/your-project
+
+# 3. Add another repository
+code --add /mnt/c/Users/YourUsername/Projects/my-app
+
+# 4. Now Roo can work across all three repositories
+# The VS Code Explorer will show all repositories
+```
+
 ## Workflow Optimization Tips
 
 1. **Use Context Mentions**: Reference files with `@filename` for efficient context sharing
 2. **Leverage MCP Servers**: Use context7 for up-to-date documentation (`resolve-library-id` and `get-library-docs`)
 3. **Auto-approval Benefits**: Read-only operations and safe commands are pre-approved for faster workflow
 4. **Mode Switching**: Switch between specialized modes for different tasks (architect for planning, code for implementation)
-5. **Host Repository Access**: Easily switch to working on host repositories using `/mnt/c/` paths
+5. **Host Repository Access**: Work with multiple repositories simultaneously - both DevContainer and host repos in one workspace
 
 ## Troubleshooting
 
