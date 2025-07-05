@@ -12,9 +12,14 @@ RUN apt-get update && apt-get install -y ca-certificates && \
 
 # Environment variables for SSL handling
 # WARNING: Disabling SSL verification is insecure and should only be used in trusted environments
-# Set these in devcontainer.json if needed:
-# NODE_TLS_REJECT_UNAUTHORIZED=0 (for NPM install)
-# CLAUDE_DISABLE_SSL_VERIFY=1 (hypothetical - Claude CLI may not support this)
+# Option 1: Disable Node.js SSL verification (for NPM install in corporate environments)
+# ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+
+# Option 2: Set custom CA certificates path
+# ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/custom/your-ca.crt
+
+# Option 3: Hypothetical Claude CLI SSL bypass (may not be supported)
+# ENV CLAUDE_DISABLE_SSL_VERIFY=1
 
 # Configure NPM for corporate environments (if needed)
 # Uncomment and modify as needed:

@@ -13,15 +13,15 @@
   ],
   "mounts": [
     // Option 1: WSL mount access (accesses all mounted drives in WSL context) - ACTIVE
-    "source=/mnt,target=/mnt,type=bind,consistency=cached"
+    "source=/mnt,target=/mnt,type=bind,consistency=cached",
     
     // Option 2: User profile access (most secure, works across all Windows systems)
-    // "source=${env:USERPROFILE},target=/mnt/user,type=bind,consistency=cached"
+    // "source=${env:USERPROFILE},target=/mnt/user,type=bind,consistency=cached",
     
     // Option 3: Specific common drives (fallback if dynamic mounting doesn't work)
     // "source=C:\\,target=/mnt/c,type=bind,consistency=cached",
     // "source=D:\\,target=/mnt/d,type=bind,consistency=cached",
-    // "source=E:\\,target=/mnt/e,type=bind,consistency=cached"
+    // "source=E:\\,target=/mnt/e,type=bind,consistency=cached",
     
     // Option 4: Mount custom CA certificates directory (for corporate SSL)
     // Create .devcontainer/certs/ and place your *.crt files there
@@ -60,16 +60,28 @@
     // The difference is timing - remoteEnv is set after container starts
   },
   
-  // Post-create command to configure NPM for corporate environments
-  // Uncomment and modify the relevant lines for your setup
+  // Post-create command options
+  // Option 1: Basic check (ACTIVE)
   "postCreateCommand": "echo 'DevContainer ready' && claude --version || echo 'Claude CLI not installed - see install-claude-helper'",
-  // Alternative with NPM configuration:
+  
+  // Option 2: With NPM proxy configuration (uncomment and modify proxy settings)
   // "postCreateCommand": "npm config set proxy http://your-proxy:port && npm config set https-proxy http://your-proxy:port && npm config set strict-ssl false && npm install -g @anthropic-ai/claude-code || echo 'See install-claude-helper for manual installation'",
+  
+  // Option 3: With custom CA certificate installation
+  // "postCreateCommand": "update-ca-certificates && npm install -g @anthropic-ai/claude-code || echo 'See install-claude-helper for manual installation'",
   
   // Features for additional functionality
   "features": {
-    // Add Docker-in-Docker if needed for container operations
-    // "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    // Option 1: Docker-in-Docker (for container operations)
+    // "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    
+    // Option 2: Python (if you need Python development)
+    // "ghcr.io/devcontainers/features/python:1": {
+    //   "version": "3.11"
+    // },
+    
+    // Option 3: Git LFS (for large file support)
+    // "ghcr.io/devcontainers/features/git-lfs:1": {}
   },
   
   "customizations": {
@@ -78,11 +90,19 @@
         "anthropic.claude-code",
         "rooveterinaryinc.roo-cline"
       ],
-      // VS Code settings for proxy (if needed)
+      // VS Code settings
       "settings": {
+        // Proxy settings (uncomment and modify if needed)
         // "http.proxy": "http://your-proxy:port",
         // "http.proxyStrictSSL": false,  // WARNING: Insecure
-        // "http.proxyAuthorization": null
+        // "http.proxyAuthorization": null,
+        
+        // Terminal settings
+        // "terminal.integrated.defaultProfile.linux": "bash",
+        // "terminal.integrated.env.linux": {
+        //   "HTTP_PROXY": "http://your-proxy:port",
+        //   "HTTPS_PROXY": "http://your-proxy:port"
+        // }
       }
     }
   }
