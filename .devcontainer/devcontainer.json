@@ -1,6 +1,12 @@
 {
   "build": {
-    "dockerfile": "Dockerfile"
+    "dockerfile": "Dockerfile",
+    // Build arguments for corporate proxy (uncomment and modify as needed)
+    "args": {
+      // "HTTP_PROXY": "http://your-proxy:port",
+      // "HTTPS_PROXY": "http://your-proxy:port",
+      // "NO_PROXY": "localhost,127.0.0.1,.your-company.com"
+    }
   },
   "runArgs": [
     "--init"
@@ -16,13 +22,68 @@
     // "source=C:\\,target=/mnt/c,type=bind,consistency=cached",
     // "source=D:\\,target=/mnt/d,type=bind,consistency=cached",
     // "source=E:\\,target=/mnt/e,type=bind,consistency=cached"
+    
+    // Option 4: Mount custom CA certificates directory (for corporate SSL)
+    // Create .devcontainer/certs/ and place your *.crt files there
+    // "source=${localWorkspaceFolder}/.devcontainer/certs,target=/usr/local/share/ca-certificates/custom,type=bind,consistency=cached"
   ],
+  
+  // Environment variables for corporate VPN/proxy bypass
+  "containerEnv": {
+    // SSL Certificate Verification (WARNING: Only disable in trusted environments)
+    // "NODE_TLS_REJECT_UNAUTHORIZED": "0",  // Disables SSL verification for NPM
+    // "NODE_EXTRA_CA_CERTS": "/usr/local/share/ca-certificates/custom/your-ca.crt",  // Custom CA cert
+    
+    // Proxy Configuration
+    // "HTTP_PROXY": "http://your-proxy:port",
+    // "HTTPS_PROXY": "http://your-proxy:port",
+    // "NO_PROXY": "localhost,127.0.0.1,.your-company.com",
+    
+    // NPM-specific proxy settings (these override npm config)
+    // "npm_config_proxy": "http://your-proxy:port",
+    // "npm_config_https_proxy": "http://your-proxy:port",
+    // "npm_config_strict_ssl": "false",  // WARNING: Insecure, development only
+    // "npm_config_registry": "https://registry.npmjs.org/",
+    
+    // Git proxy configuration
+    // "GIT_SSL_NO_VERIFY": "1",  // WARNING: Insecure, disables Git SSL verification
+    
+    // Hypothetical Claude CLI environment variables (may not be supported)
+    // "CLAUDE_DISABLE_SSL_VERIFY": "1",
+    // "CLAUDE_HTTP_PROXY": "http://your-proxy:port"
+  },
+  
+  // Remote environment variables (alternative to containerEnv)
+  // These are set in the VS Code terminal sessions
+  "remoteEnv": {
+    // Same options as containerEnv can be placed here
+    // The difference is timing - remoteEnv is set after container starts
+  },
+  
+  // Post-create command to configure NPM for corporate environments
+  // Uncomment and modify the relevant lines for your setup
+  "postCreateCommand": "echo 'DevContainer ready' && claude --version || echo 'Claude CLI not installed - see install-claude-helper'",
+  // Alternative with NPM configuration:
+  // "postCreateCommand": "npm config set proxy http://your-proxy:port && npm config set https-proxy http://your-proxy:port && npm config set strict-ssl false && npm install -g @anthropic-ai/claude-code || echo 'See install-claude-helper for manual installation'",
+  
+  // Features for additional functionality
+  "features": {
+    // Add Docker-in-Docker if needed for container operations
+    // "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  
   "customizations": {
     "vscode": {
       "extensions": [
         "anthropic.claude-code",
         "rooveterinaryinc.roo-cline"
-      ]
+      ],
+      // VS Code settings for proxy (if needed)
+      "settings": {
+        // "http.proxy": "http://your-proxy:port",
+        // "http.proxyStrictSSL": false,  // WARNING: Insecure
+        // "http.proxyAuthorization": null
+      }
     }
   }
 }

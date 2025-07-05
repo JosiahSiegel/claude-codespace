@@ -329,6 +329,85 @@ npm install -g @anthropic-ai/claude-code
 3. Uncomment the certificate copying section in the Dockerfile
 4. Rebuild the container
 
+#### DevContainer.json Configuration for Corporate Environments
+
+The [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json:3) file includes comprehensive configurations for corporate VPN/proxy environments. Here's how to configure them:
+
+**1. Build Arguments for Proxy**
+```json
+"build": {
+  "dockerfile": "Dockerfile",
+  "args": {
+    "HTTP_PROXY": "http://your-proxy:port",
+    "HTTPS_PROXY": "http://your-proxy:port",
+    "NO_PROXY": "localhost,127.0.0.1,.your-company.com"
+  }
+}
+```
+
+**2. Environment Variables**
+
+Configure in `containerEnv` (set when container starts):
+```json
+"containerEnv": {
+  // SSL Certificate Verification (WARNING: Only disable in trusted environments)
+  "NODE_TLS_REJECT_UNAUTHORIZED": "0",  // Disables SSL verification for NPM
+  "NODE_EXTRA_CA_CERTS": "/usr/local/share/ca-certificates/custom/your-ca.crt",
+  
+  // Proxy Configuration
+  "HTTP_PROXY": "http://your-proxy:port",
+  "HTTPS_PROXY": "http://your-proxy:port",
+  "NO_PROXY": "localhost,127.0.0.1,.your-company.com",
+  
+  // NPM-specific proxy settings
+  "npm_config_proxy": "http://your-proxy:port",
+  "npm_config_https_proxy": "http://your-proxy:port",
+  "npm_config_strict_ssl": "false",  // WARNING: Insecure
+  
+  // Git proxy configuration
+  "GIT_SSL_NO_VERIFY": "1"  // WARNING: Insecure
+}
+```
+
+**3. Custom CA Certificates Mount**
+```json
+"mounts": [
+  // Mount your corporate CA certificates
+  "source=${localWorkspaceFolder}/.devcontainer/certs,target=/usr/local/share/ca-certificates/custom,type=bind,consistency=cached"
+]
+```
+
+**4. Post-Create Command Options**
+
+Option A - Basic check:
+```json
+"postCreateCommand": "claude --version || echo 'Claude CLI not installed - see install-claude-helper'"
+```
+
+Option B - With proxy configuration:
+```json
+"postCreateCommand": "npm config set proxy http://your-proxy:port && npm config set https-proxy http://your-proxy:port && npm config set strict-ssl false && npm install -g @anthropic-ai/claude-code"
+```
+
+**5. VS Code Proxy Settings**
+```json
+"customizations": {
+  "vscode": {
+    "settings": {
+      "http.proxy": "http://your-proxy:port",
+      "http.proxyStrictSSL": false,  // WARNING: Insecure
+      "http.proxyAuthorization": null
+    }
+  }
+}
+```
+
+**Important Notes:**
+- Environment variables in `containerEnv` are set when the container starts
+- Use `remoteEnv` instead if you need variables set after VS Code connects
+- Disabling SSL verification is insecure and should only be used in trusted development environments
+- Always re-enable SSL verification after installation when possible
+
 #### Authentication Limitations
 
 **⚠️ Critical Limitation**: Even if Claude CLI installs successfully, `claude login` will fail in environments with:
