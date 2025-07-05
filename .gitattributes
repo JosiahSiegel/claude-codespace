@@ -1,0 +1,85 @@
+# Set default behavior to automatically normalize line endings
+* text=auto eol=lf
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout
+*.md text
+*.json text
+*.yaml text
+*.yml text
+*.sh text
+*.bash text
+*.zsh text
+*.fish text
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Source code
+*.js text
+*.jsx text
+*.ts text
+*.tsx text
+*.py text
+*.rb text
+*.go text
+*.java text
+*.c text
+*.cpp text
+*.h text
+*.hpp text
+*.cs text
+*.php text
+*.swift text
+*.kt text
+*.rs text
+
+# Configuration files
+*.ini text
+*.cfg text
+*.conf text
+*.config text
+*.toml text
+*.xml text
+*.svg text
+*.properties text
+.gitignore text
+.gitattributes text
+.editorconfig text
+Dockerfile text
+Makefile text
+LICENSE text
+README text
+
+# DevContainer specific
+devcontainer.json text
+.devcontainer/* text
+
+# Shell scripts should always use LF
+*.sh text eol=lf
+rwsl text eol=lf
+
+# Windows scripts should use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files - Git should not try to modify these
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
