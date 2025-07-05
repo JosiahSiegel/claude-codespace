@@ -5,14 +5,21 @@
   },
   "runArgs": ["--init"],
   "mounts": [
-    // Uncomment the mounts below to enable broader host filesystem access
+    // Option 1: WSL mount access (accesses all mounted drives in WSL context) - ACTIVE
+    "source=/mnt,target=/mnt,type=bind,consistency=cached"
+    
+    // Option 2: User profile access (most secure, works across all Windows systems)
+    // "source=${env:USERPROFILE},target=/mnt/user,type=bind,consistency=cached"
+    
+    // Option 3: Specific common drives (fallback if dynamic mounting doesn't work)
     // "source=C:\\,target=/mnt/c,type=bind,consistency=cached",
-    // "source=C:\\Users,target=/mnt/host/Users,type=bind,consistency=cached"
+    // "source=D:\\,target=/mnt/d,type=bind,consistency=cached",
+    // "source=E:\\,target=/mnt/e,type=bind,consistency=cached"
   ],
   "customizations": {
     "vscode": {
       "extensions": [
-        "roo-coder.roo-coder"
+        "rooveterinaryinc.roo-cline"
       ]
     }
   }
