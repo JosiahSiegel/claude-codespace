@@ -83,4 +83,32 @@ claude
 - Ensure proper user permissions within the DevContainer
 - Verify workspace directory access: `/workspaces/claude-codespace`
 - Check that all required tools are available in the container PATH
+
+### Host Filesystem Access
+Currently, the DevContainer has **limited** host filesystem access:
+
+**✅ Current Access:**
+- The workspace directory (`/workspaces/claude-codespace`) is mounted from your Windows host
+- Can access files within the repository and its parent directories
+- Changes made in the container are reflected on the host system
+
+**❌ Limited Access:**
+- Cannot access broader Windows filesystem (C:\Users, C:\Program Files, etc.)
+- Cannot access files outside the mounted workspace directory
+
+**🔧 To Enable Broader Host Access:**
+Uncomment the mount configurations in [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json:7):
+```json
+"mounts": [
+  "source=C:\\,target=/mnt/c,type=bind,consistency=cached",
+  "source=C:\\Users,target=/mnt/host/Users,type=bind,consistency=cached"
+]
+```
+
+After uncommenting and rebuilding the container, you'll have:
+- Full C:\ drive access at `/mnt/c/`
+- User folders access at `/mnt/host/Users/`
+- Ability to work with files anywhere on your Windows system
+
+**⚠️ Security Note:** Broader filesystem access increases security considerations. Only enable if needed for your workflow.
 ```

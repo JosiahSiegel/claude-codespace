@@ -4,6 +4,11 @@
     "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
   },
   "runArgs": ["--init"],
+  "mounts": [
+    // Uncomment the mounts below to enable broader host filesystem access
+    // "source=C:\\,target=/mnt/c,type=bind,consistency=cached",
+    // "source=C:\\Users,target=/mnt/host/Users,type=bind,consistency=cached"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
