@@ -451,6 +451,12 @@ generate_report() {
         echo "  2. Test Claude CLI: claude --version"
         echo "  3. Authenticate: claude auth login"
         echo "  4. Verify functionality: curl -v $CLAUDE_API_URL"
+        echo
+        log_warn "⚠️  VPN USERS: Important Authentication Note"
+        echo "  • If you're using a VPN, you may need to DISCONNECT it temporarily"
+        echo "  • Run 'claude auth login' with VPN disconnected"
+        echo "  • After successful authentication, you can re-enable your VPN"
+        echo "  • This is often required due to VPN SSL certificate interference"
         
     else
         log_warn "⚠️  Automatic fixes were not successful"
@@ -478,6 +484,12 @@ generate_report() {
         echo "     • Switch to personal network temporarily for initial auth"
         echo "     • Use mobile hotspot to complete 'claude auth login'"
         echo "     • Once authenticated, tokens are cached for corporate network use"
+        echo
+        log_warn "⚠️  VPN USERS: Important Authentication Note"
+        echo "     • If you're using a VPN, you may need to DISCONNECT it temporarily"
+        echo "     • Run 'claude auth login' with VPN disconnected"
+        echo "     • After successful authentication, you can re-enable your VPN"
+        echo "     • This is often required due to VPN SSL certificate interference"
         echo
         
         echo "  📋 For Manual Certificate Installation:"

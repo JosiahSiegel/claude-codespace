@@ -9,7 +9,8 @@
     }
   },
   "runArgs": [
-    "--init"
+    "--init",
+    "--network=host"
   ],
   "mounts": [
     // Option 1: WSL mount access (accesses all mounted drives in WSL context) - ACTIVE
