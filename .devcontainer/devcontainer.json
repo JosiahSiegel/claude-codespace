@@ -1,66 +1,26 @@
 {
   "build": {
-    "dockerfile": "Dockerfile",
-    // Build arguments for corporate proxy (uncomment and modify as needed)
-    "args": {
-      // "HTTP_PROXY": "http://your-proxy:port",
-      // "HTTPS_PROXY": "http://your-proxy:port",
-      // "NO_PROXY": "localhost,127.0.0.1,.your-company.com"
-    }
+    "dockerfile": "Dockerfile"
   },
   "runArgs": [
-    "--init",
-    "--network=host"
+    "--init"
   ],
   "mounts": [
     // Option 1: WSL mount access (accesses all mounted drives in WSL context) - ACTIVE
-    "source=/mnt,target=/mnt,type=bind,consistency=cached",
+    "source=/mnt,target=/mnt,type=bind,consistency=cached"
     
     // Option 2: User profile access (most secure, works across all Windows systems)
-    // "source=${env:USERPROFILE},target=/mnt/user,type=bind,consistency=cached",
+    // "source=${env:USERPROFILE},target=/mnt/user,type=bind,consistency=cached"
     
     // Option 3: Specific common drives (fallback if dynamic mounting doesn't work)
     // "source=C:\\,target=/mnt/c,type=bind,consistency=cached",
     // "source=D:\\,target=/mnt/d,type=bind,consistency=cached",
-    // "source=E:\\,target=/mnt/e,type=bind,consistency=cached",
+    // "source=E:\\,target=/mnt/e,type=bind,consistency=cached"
     
     // Option 4: Mount custom CA certificates directory (for corporate SSL)
     // Create .devcontainer/certs/ and place your *.crt files there
     // "source=${localWorkspaceFolder}/.devcontainer/certs,target=/usr/local/share/ca-certificates/custom,type=bind,consistency=cached"
   ],
-  
-  // Environment variables for corporate VPN/proxy bypass
-  "containerEnv": {
-    // SSL Certificate Verification (WARNING: Only disable in trusted environments)
-    // "NODE_TLS_REJECT_UNAUTHORIZED": "0",  // Disables SSL verification for NPM
-    // "NODE_EXTRA_CA_CERTS": "/usr/local/share/ca-certificates/custom/your-ca.crt",  // Custom CA cert
-    
-    // Proxy Configuration
-    // "HTTP_PROXY": "http://your-proxy:port",
-    // "HTTPS_PROXY": "http://your-proxy:port",
-    // "NO_PROXY": "localhost,127.0.0.1,.your-company.com",
-    
-    // NPM-specific proxy settings (these override npm config)
-    // "npm_config_proxy": "http://your-proxy:port",
-    // "npm_config_https_proxy": "http://your-proxy:port",
-    // "npm_config_strict_ssl": "false",  // WARNING: Insecure, development only
-    // "npm_config_registry": "https://registry.npmjs.org/",
-    
-    // Git proxy configuration
-    // "GIT_SSL_NO_VERIFY": "1",  // WARNING: Insecure, disables Git SSL verification
-    
-    // Hypothetical Claude CLI environment variables (may not be supported)
-    // "CLAUDE_DISABLE_SSL_VERIFY": "1",
-    // "CLAUDE_HTTP_PROXY": "http://your-proxy:port"
-  },
-  
-  // Remote environment variables (alternative to containerEnv)
-  // These are set in the VS Code terminal sessions
-  "remoteEnv": {
-    // Same options as containerEnv can be placed here
-    // The difference is timing - remoteEnv is set after container starts
-  },
-  
   // Post-create command options
   // Option 1: Basic check (ACTIVE)
   "postCreateCommand": "echo 'DevContainer ready' && claude --version || echo 'Claude CLI not installed - see install-claude-helper'",
@@ -84,27 +44,12 @@
     // Option 3: Git LFS (for large file support)
     // "ghcr.io/devcontainers/features/git-lfs:1": {}
   },
-  
   "customizations": {
     "vscode": {
       "extensions": [
         "anthropic.claude-code",
         "rooveterinaryinc.roo-cline"
-      ],
-      // VS Code settings
-      "settings": {
-        // Proxy settings (uncomment and modify if needed)
-        // "http.proxy": "http://your-proxy:port",
-        // "http.proxyStrictSSL": false,  // WARNING: Insecure
-        // "http.proxyAuthorization": null,
-        
-        // Terminal settings
-        // "terminal.integrated.defaultProfile.linux": "bash",
-        // "terminal.integrated.env.linux": {
-        //   "HTTP_PROXY": "http://your-proxy:port",
-        //   "HTTPS_PROXY": "http://your-proxy:port"
-        // }
-      }
+      ]
     }
   }
 }

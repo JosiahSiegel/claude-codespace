@@ -5,8 +5,22 @@ FROM node:latest
 RUN apt-get update && apt-get install -y ca-certificates curl && \
     update-ca-certificates
 
-# Install Azure CLI
-RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+# Install Azure CLI with robust installation method for VPN/corporate environments
+RUN apt-get update && apt-get install -y ca-certificates curl apt-transport-https lsb-release gnupg && \
+    # Create keyring directory if it doesn't exist
+    mkdir -p /etc/apt/keyrings && \
+    # Download and add Microsoft GPG key with better error handling
+    curl -sLS https://packages.microsoft.com/keys/microsoft.asc | \
+    gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg && \
+    # Set proper permissions on the keyring
+    chmod 644 /etc/apt/keyrings/microsoft.gpg && \
+    # Add Azure CLI repository with signed-by option
+    AZ_REPO=$(lsb_release -cs) && \
+    echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | \
+    tee /etc/apt/sources.list.d/azure-cli.list && \
+    # Update package list and install Azure CLI
+    apt-get update && \
+    apt-get install -y azure-cli
 
 # Option 2: Copy custom certificates if provided
 # Uncomment and place your corporate certs in .devcontainer/certs/
