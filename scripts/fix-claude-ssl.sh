@@ -296,17 +296,27 @@ install_certificates() {
         return 1
     fi
     
-    # Combine all certificates into a bundle
-    log_info "Creating certificate bundle..."
-     find "$CUSTOM_CERT_DIR" -name "*.crt" -o -name "*.pem" -o -name "*.cer" | while read cert_file; do
-        if [ -f "$cert_file" ]; then
-             cat "$cert_file" >> "$CERT_BUNDLE_PATH.tmp"
+    # Create comprehensive certificate bundle (system + corporate)
+    log_info "Creating comprehensive certificate bundle..."
+    local complete_bundle="$CUSTOM_CERT_DIR/complete-ca-bundle.crt"
+    
+    # Start with system certificates
+    if [ -f "/etc/ssl/certs/ca-certificates.crt" ]; then
+        cat "/etc/ssl/certs/ca-certificates.crt" > "$complete_bundle"
+        log_info "Added system certificates to bundle"
+    fi
+    
+    # Add corporate certificates
+    find "$CUSTOM_CERT_DIR" -name "*.crt" -o -name "*.pem" -o -name "*.cer" | while read cert_file; do
+        if [ -f "$cert_file" ] && [ "$cert_file" != "$complete_bundle" ]; then
+            cat "$cert_file" >> "$complete_bundle"
         fi
     done
     
-    if [ -f "$CERT_BUNDLE_PATH.tmp" ]; then
-         mv "$CERT_BUNDLE_PATH.tmp" "$CERT_BUNDLE_PATH"
-        log_success "Certificate bundle created: $CERT_BUNDLE_PATH"
+    if [ -f "$complete_bundle" ]; then
+        # Copy to both locations for compatibility
+        cp "$complete_bundle" "$CERT_BUNDLE_PATH"
+        log_success "Complete certificate bundle created: $complete_bundle"
     else
         log_error "Failed to create certificate bundle"
         return 1
@@ -314,11 +324,11 @@ install_certificates() {
     
     # Update system certificate store
     log_info "Updating system certificate store..."
-     update-ca-certificates >/dev/null 2>&1 || true
+    update-ca-certificates >/dev/null 2>&1 || true
     
-    # Configure Node.js/Claude CLI to use certificates
+    # Configure Node.js/Claude CLI to use complete certificate bundle
     log_info "Configuring Node.js certificate path..."
-    export NODE_EXTRA_CA_CERTS="$CERT_BUNDLE_PATH"
+    export NODE_EXTRA_CA_CERTS="$complete_bundle"
     
     # Add to shell profile for persistence
     local shell_profile
@@ -330,11 +340,15 @@ install_certificates() {
         shell_profile="$HOME/.profile"
     fi
     
-    if ! grep -q "NODE_EXTRA_CA_CERTS.*$CERT_BUNDLE_PATH" "$shell_profile" 2>/dev/null; then
-        echo "# Claude SSL Fix - Corporate Certificates" >> "$shell_profile"
-        echo "export NODE_EXTRA_CA_CERTS=\"$CERT_BUNDLE_PATH\"" >> "$shell_profile"
-        log_success "Certificate path added to $shell_profile"
+    # Remove old configuration and add new complete bundle configuration
+    if [ -f "$shell_profile" ]; then
+        sed -i '/# Claude SSL Fix/d' "$shell_profile" 2>/dev/null || true
+        sed -i '/NODE_EXTRA_CA_CERTS.*claude-ssl-fix/d' "$shell_profile" 2>/dev/null || true
     fi
+    
+    echo "# Claude SSL Fix - Complete Certificate Bundle" >> "$shell_profile"
+    echo "export NODE_EXTRA_CA_CERTS=\"$complete_bundle\"" >> "$shell_profile"
+    log_success "Complete certificate bundle path added to $shell_profile"
     
     FIX_APPLIED=true
     return 0
@@ -418,11 +432,11 @@ test_claude_cli() {
     
     # Test authentication status (don't try to login automatically)
     log_info "Checking Claude CLI authentication status..."
-    if timeout 10 claude auth status >/dev/null 2>&1; then
+    if timeout 10 claude /status >/dev/null 2>&1; then
         log_success "Claude CLI authentication is working"
     else
         log_warn "Claude CLI authentication test failed or timed out"
-        log_info "You may need to run 'claude auth login' after fixing SSL issues"
+        log_info "You may need to run 'claude /login' after fixing SSL issues"
     fi
     
     return 0
@@ -446,17 +460,20 @@ generate_report() {
         fi
         
         echo
-        log_info "Next steps:"
+        log_info "Next steps for authentication:"
         echo "  1. Restart your terminal or run: source ~/.bashrc"
         echo "  2. Test Claude CLI: claude --version"
-        echo "  3. Authenticate: claude auth login"
+        echo "  3. Try authentication with one of these methods:"
+        echo "     a) NODE_OPTIONS='--use-system-ca' claude /login"
+        echo "     b) claude /login (if method a doesn't work)"
+        echo "     c) Temporarily disconnect VPN and try claude /login"
         echo "  4. Verify functionality: curl -v $CLAUDE_API_URL"
         echo
-        log_warn "⚠️  VPN USERS: Important Authentication Note"
-        echo "  • If you're using a VPN, you may need to DISCONNECT it temporarily"
-        echo "  • Run 'claude auth login' with VPN disconnected"
-        echo "  • After successful authentication, you can re-enable your VPN"
-        echo "  • This is often required due to VPN SSL certificate interference"
+        log_info "🔧 OAuth Authentication Solutions:"
+        echo "  • Use Node.js system CA: NODE_OPTIONS='--use-system-ca' claude /login"
+        echo "  • Corporate proxy detected: Zscaler/corporate certificates now trusted"
+        echo "  • If still failing, temporarily disconnect VPN for initial auth"
+        echo "  • Contact IT to whitelist OAuth endpoints: *.anthropic.com, *.claude.ai"
         
     else
         log_warn "⚠️  Automatic fixes were not successful"
@@ -480,24 +497,19 @@ generate_report() {
             echo
         fi
         
-        echo "  🔧 Alternative Solutions:"
+        echo "  🔧 OAuth Authentication Solutions:"
+        echo "     • Try: NODE_OPTIONS='--use-system-ca' claude /login"
         echo "     • Switch to personal network temporarily for initial auth"
-        echo "     • Use mobile hotspot to complete 'claude auth login'"
+        echo "     • Use mobile hotspot to complete 'claude /login'"
         echo "     • Once authenticated, tokens are cached for corporate network use"
-        echo
-        log_warn "⚠️  VPN USERS: Important Authentication Note"
-        echo "     • If you're using a VPN, you may need to DISCONNECT it temporarily"
-        echo "     • Run 'claude auth login' with VPN disconnected"
-        echo "     • After successful authentication, you can re-enable your VPN"
-        echo "     • This is often required due to VPN SSL certificate interference"
+        echo "     • Temporarily disconnect VPN for initial authentication"
         echo
         
-        echo "  📋 For Manual Certificate Installation:"
-        echo "     1. Export corporate root certificate from browser"
-        echo "     2. Save as corporate-root.crt"
-        echo "     3. Run:  cp corporate-root.crt /usr/local/share/ca-certificates/"
-        echo "     4. Run:  update-ca-certificates"
-        echo "     5. Run: export NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/corporate-root.crt"
+        echo "  📋 Manual Certificate Bundle Creation:"
+        echo "     1. Extract corporate certificates: openssl s_client -connect api.anthropic.com:443 -showcerts"
+        echo "     2. Create bundle: cat /etc/ssl/certs/ca-certificates.crt extracted-certs.crt > complete-bundle.crt"
+        echo "     3. Export: NODE_EXTRA_CA_CERTS=/path/to/complete-bundle.crt"
+        echo "     4. Add to shell profile for persistence"
     fi
     
     echo

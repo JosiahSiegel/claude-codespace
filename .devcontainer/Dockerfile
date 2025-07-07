@@ -2,8 +2,11 @@ FROM node:latest
 
 # SSL Certificate handling for corporate environments
 # Option 1: Update system certificates (default behavior)
-RUN apt-get update && apt-get install -y ca-certificates && \
+RUN apt-get update && apt-get install -y ca-certificates curl && \
     update-ca-certificates
+
+# Install Azure CLI
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Option 2: Copy custom certificates if provided
 # Uncomment and place your corporate certs in .devcontainer/certs/
