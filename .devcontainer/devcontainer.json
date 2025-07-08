@@ -46,9 +46,6 @@
         }
       },
       "extensions": [
-        "ms-azuretools.vscode-azureresourcegroups",
-        "hashicorp.terraform",
-        "redhat.vscode-yaml",
         "rooveterinaryinc.roo-cline",
         "yzhang.markdown-all-in-one"
       ]
