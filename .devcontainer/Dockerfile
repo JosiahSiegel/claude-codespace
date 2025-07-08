@@ -3,6 +3,7 @@
 
 # ===== STAGE 1: Extract tools from official images =====
 FROM hashicorp/terraform:1.7 AS terraform
+FROM node:20-slim AS node
 
 # ===== STAGE 2: GitHub CLI =====
 FROM ubuntu:22.04 AS github-cli
@@ -46,11 +47,13 @@ RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 # Copy Terraform
 COPY --from=terraform /bin/terraform /usr/local/bin/terraform
 
-# Install Node.js directly (more reliable than copying)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Copy complete Node.js installation from official image
+COPY --from=node /usr/local/ /usr/local/
+
+# Create symlinks for node
+RUN ln -s /usr/local/bin/node /usr/bin/node \
+    && ln -s /usr/local/bin/npm /usr/bin/npm \
+    && ln -s /usr/local/bin/npx /usr/bin/npx
 
 # Copy GitHub CLI
 COPY --from=github-cli /usr/local/bin/gh /usr/local/bin/gh
