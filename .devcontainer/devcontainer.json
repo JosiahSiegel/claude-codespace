@@ -86,10 +86,7 @@
   "mounts": [
     "source=${localWorkspaceFolder}/.devcontainer/cache/azure,target=/home/vscode/.azure,type=bind,consistency=cached",
     "source=${localWorkspaceFolder}/.devcontainer/cache/terraform,target=/home/vscode/.terraform.d,type=bind,consistency=cached",
-    "source=/,target=/host,type=bind,consistency=cached",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached,readonly",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/vscode/.gitconfig-host,type=bind,consistency=cached,readonly",
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.azure,target=/home/vscode/.azure-host,type=bind,consistency=cached"
+    "source=/,target=/host,type=bind,consistency=cached"
   ],
 
   "postCreateCommand": ".devcontainer/scripts/post-create.sh",
