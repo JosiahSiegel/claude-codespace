@@ -10,7 +10,7 @@ FROM ghcr.io/josiahsiegel/devops-image:latest
 
 # Install aztfexport (only tool not included in base image)
 ARG AZTFEXPORT_VERSION=0.18.0
-RUN wget "https://github.com/Azure/aztfexport/releases/download/v${AZTFEXPORT_VERSION}/aztfexport_v${AZTFEXPORT_VERSION}_linux_amd64.zip" \
+RUN wget --no-check-certificate "https://github.com/Azure/aztfexport/releases/download/v${AZTFEXPORT_VERSION}/aztfexport_v${AZTFEXPORT_VERSION}_linux_amd64.zip" \
     && unzip aztfexport_v${AZTFEXPORT_VERSION}_linux_amd64.zip \
     && chmod +x aztfexport \
     && mv aztfexport /usr/local/bin/ \
