@@ -63,7 +63,7 @@
       "onAutoForward": "silent"
     },
     "10001": {
-      "label": "Azurite Queue", 
+      "label": "Azurite Queue",
       "onAutoForward": "silent"
     },
     "10002": {
@@ -71,6 +71,16 @@
       "onAutoForward": "silent"
     }
   },
+  
+  // Disable automatic port forwarding to prevent conflicts
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
+  
+  // Add network mode to prevent port conflicts
+  "runArgs": [
+    "--network=host"
+  ],
 
   "remoteEnv": {
     "AZURE_DEV_ENVIRONMENT": "true",

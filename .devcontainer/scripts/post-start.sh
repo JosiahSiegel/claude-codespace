@@ -70,6 +70,21 @@ else
     chown vscode:vscode /home/vscode/.config/mcp
 fi
 
+# Check and fix port forwarding issues
+echo "🔍 Checking port forwarding status..."
+if [ -f ".devcontainer/scripts/fix-port-forwarding.sh" ]; then
+    # Run a quick port check (non-interactive)
+    if netstat -tuln 2>/dev/null | grep -q ":8080\|:10000\|:10001\|:10002"; then
+        echo "⚠️  Port conflicts detected, running port forwarding fix..."
+        # Run the fix script in non-interactive mode
+        bash .devcontainer/scripts/fix-port-forwarding.sh 2>/dev/null || true
+    else
+        echo "✅ No port forwarding conflicts detected"
+    fi
+else
+    echo "⚠️  Port forwarding fix script not found"
+fi
+
 # Display welcome message with status
 echo ""
 echo "🎉 DevContainer post-start setup complete!"
@@ -79,6 +94,8 @@ echo "   • Claude CLI: $(command -v claude >/dev/null && echo "✅ Available" 
 echo "   • Azure CLI: $(command -v az >/dev/null && echo "✅ Available" || echo "❌ Not found")"
 echo "   • Terraform: $(command -v terraform >/dev/null && echo "✅ Available" || echo "❌ Not found")"
 echo "   • Git: $(command -v git >/dev/null && echo "✅ Available" || echo "❌ Not found")"
+echo "   • Port Forwarding: $(netstat -tuln 2>/dev/null | grep -q ":8080\|:10000\|:10001\|:10002" && echo "⚠️  Conflicts detected" || echo "✅ Clean")"
 echo ""
 echo "💡 Run 'check-versions' for detailed version information"
+echo "💡 Run '.devcontainer/scripts/fix-port-forwarding.sh' if experiencing port issues"
 echo ""
