@@ -1,55 +1,188 @@
 {
+  "name": "Azure/Terraform Development Environment",
   "build": {
-    "dockerfile": "Dockerfile"
+    "dockerfile": "Dockerfile",
+    "args": {
+      "AZTFEXPORT_VERSION": "0.18.0"
+    }
   },
-  "runArgs": [
-    "--init"
-  ],
-  "mounts": [
-    // Option 1: WSL mount access (accesses all mounted drives in WSL context) - ACTIVE
-    "source=/mnt,target=/mnt,type=bind,consistency=cached"
-    
-    // Option 2: User profile access (most secure, works across all Windows systems)
-    // "source=${env:USERPROFILE},target=/mnt/user,type=bind,consistency=cached"
-    
-    // Option 3: Specific common drives (fallback if dynamic mounting doesn't work)
-    // "source=C:\\,target=/mnt/c,type=bind,consistency=cached",
-    // "source=D:\\,target=/mnt/d,type=bind,consistency=cached",
-    // "source=E:\\,target=/mnt/e,type=bind,consistency=cached"
-    
-    // Option 4: Mount custom CA certificates directory (for corporate SSL)
-    // Create .devcontainer/certs/ and place your *.crt files there
-    // "source=${localWorkspaceFolder}/.devcontainer/certs,target=/usr/local/share/ca-certificates/custom,type=bind,consistency=cached"
-  ],
-  // Post-create command options
-  // Option 1: Basic check (ACTIVE)
-  "postCreateCommand": "echo 'DevContainer ready' && claude --version || echo 'Claude CLI not installed - see install-claude-helper'",
   
-  // Option 2: With NPM proxy configuration (uncomment and modify proxy settings)
-  // "postCreateCommand": "npm config set proxy http://your-proxy:port && npm config set https-proxy http://your-proxy:port && npm config set strict-ssl false && npm install -g @anthropic-ai/claude-code || echo 'See install-claude-helper for manual installation'",
-  
-  // Option 3: With custom CA certificate installation
-  // "postCreateCommand": "update-ca-certificates && npm install -g @anthropic-ai/claude-code || echo 'See install-claude-helper for manual installation'",
-  
-  // Features for additional functionality
+  // Use devcontainer features for most tools - more efficient than installing manually
   "features": {
-    // Option 1: Docker-in-Docker (for container operations)
-    // "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    // Common utilities (creates non-root user, sudo, etc.)
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "username": "vscode",
+      "userUid": "1000",
+      "userGid": "1000",
+      "upgradePackages": true
+    },
     
-    // Option 2: Python (if you need Python development)
-    // "ghcr.io/devcontainers/features/python:1": {
-    //   "version": "3.11"
-    // },
+    // Azure CLI - Official Microsoft Azure CLI
+    "ghcr.io/devcontainers/features/azure-cli:1": {
+      "version": "latest",
+      "installBicep": true,
+      "installAzureDevops": true
+    },
     
-    // Option 3: Git LFS (for large file support)
-    // "ghcr.io/devcontainers/features/git-lfs:1": {}
+    // Terraform from HashiCorp
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "1.7",
+      "tflint": "latest",
+      "terragrunt": "none"
+    },
+    
+    // Node.js for Claude Code
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "nodeGypDependencies": true
+    },
+    
+    // GitHub CLI
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "installDirectlyFromGitHubRelease": true,
+      "version": "latest"
+    }
   },
+
+  // Configure tool-specific settings
   "customizations": {
     "vscode": {
+      "settings": {
+        // Terminal settings
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "icon": "terminal-bash"
+          }
+        },
+        
+        // Editor settings
+        "editor.formatOnSave": false,
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        
+        // Git settings
+        "git.autofetch": true,
+        "git.confirmSync": false,
+        "git.enableSmartCommit": true,
+        
+        // Azure settings
+        "azure.tenant": "${localEnv:AZURE_TENANT_ID}",
+        
+        // Terraform settings
+        "terraform.indexing": {
+          "enabled": true,
+          "liveIndexing": true
+        },
+        "terraform.languageServer": {
+          "enabled": true
+        },
+        
+        // File associations
+        "files.associations": {
+          "*.tf": "terraform",
+          "*.tfvars": "terraform",
+          "*.hcl": "terraform",
+          "*.azcli": "shellscript"
+        },
+        
+        // File exclusions
+        "files.exclude": {
+          "**/.terraform": true,
+          "**/*.tfstate*": true,
+          "**/.DS_Store": true
+        }
+      },
+      
+      // VS Code extensions - Essential, well-maintained only
       "extensions": [
-        "anthropic.claude-code",
-        "rooveterinaryinc.roo-cline"
+        // Azure - Official Microsoft extensions (updated for 2025)
+        "ms-azuretools.vscode-azureresourcegroups",
+        
+        // Terraform - Official HashiCorp extension
+        "hashicorp.terraform",
+        
+        // Docker - Official Microsoft extension
+        "ms-azuretools.vscode-docker",
+        
+        // YAML - Required for pipelines and configs
+        "redhat.vscode-yaml",
+        
+        // AI assistance
+        "rooveterinaryinc.roo-cline",
+        
+        // Markdown - For documentation
+        "yzhang.markdown-all-in-one"
       ]
     }
+  },
+
+  // Port forwarding for local services
+  "forwardPorts": [8080, 10000, 10001, 10002],
+  "portsAttributes": {
+    "8080": {
+      "label": "Web App",
+      "onAutoForward": "notify"
+    },
+    "10000": {
+      "label": "Azurite Blob",
+      "onAutoForward": "silent"
+    },
+    "10001": {
+      "label": "Azurite Queue", 
+      "onAutoForward": "silent"
+    },
+    "10002": {
+      "label": "Azurite Table",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // Environment variables
+  "remoteEnv": {
+    "AZURE_DEV_ENVIRONMENT": "true",
+    "TF_CLI_CONFIG_FILE": "${containerWorkspaceFolder}/.terraform.rc"
+  },
+
+  // Mounts for persistent data and host drives
+  "mounts": [
+    // Cache directories
+    "source=${localWorkspaceFolder}/.devcontainer/cache/azure,target=/home/vscode/.azure,type=bind,consistency=cached",
+    "source=${localWorkspaceFolder}/.devcontainer/cache/terraform,target=/home/vscode/.terraform.d,type=bind,consistency=cached",
+    
+    // Mount all host drives
+    "source=/,target=/host,type=bind,consistency=cached",
+    
+    // Additional common mounts
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached,readonly",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/vscode/.gitconfig-host,type=bind,consistency=cached,readonly",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.azure,target=/home/vscode/.azure-host,type=bind,consistency=cached"
+  ],
+
+  // Run commands after container is created
+  "postCreateCommand": ".devcontainer/scripts/post-create.sh",
+  
+  // Run commands after container starts
+  "postStartCommand": ".devcontainer/scripts/post-start.sh",
+  
+  // Run commands after attaching to container (handle Windows line endings)
+  "postAttachCommand": "sed 's/\\r$//' .devcontainer/scripts/check-versions | bash",
+
+  // Container user
+  "remoteUser": "vscode",
+  
+  // Update remote user UID/GID
+  "updateRemoteUserUID": true,
+
+  // Shutdown action
+  "shutdownAction": "stopContainer",
+
+  // Host requirements
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "4gb",
+    "storage": "32gb"
   }
 }

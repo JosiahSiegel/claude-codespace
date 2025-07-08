@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# Version checking script for DevContainer
+# This script displays versions of all installed development tools
+
+echo "🔍 Development Environment Versions"
+echo "=================================="
+echo ""
+
+# System info
+echo "📋 System Information:"
+echo "   OS: $(lsb_release -d 2>/dev/null | cut -f2 || uname -s)"
+echo "   Kernel: $(uname -r)"
+echo "   Architecture: $(uname -m)"
+echo ""
+
+# Core tools
+echo "🛠️  Core Development Tools:"
+echo -n "   Git: "
+git --version 2>/dev/null || echo "Not installed"
+
+echo -n "   Node.js: "
+node --version 2>/dev/null || echo "Not installed"
+
+echo -n "   npm: "
+npm --version 2>/dev/null || echo "Not installed"
+
+echo ""
+
+# Azure tools
+echo "☁️  Azure Tools:"
+echo -n "   Azure CLI: "
+az --version 2>/dev/null | head -1 | grep -o 'azure-cli[[:space:]]*[0-9.]*' || echo "Not installed"
+
+echo -n "   aztfexport: "
+if command -v aztfexport >/dev/null 2>&1; then
+    version_output=$(aztfexport --version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' 2>/dev/null)
+    if [ -n "$version_output" ]; then
+        echo "v$version_output"
+    else
+        echo "Installed (version detection failed)"
+    fi
+else
+    echo "Not installed"
+fi
+
+echo ""
+
+# Infrastructure tools
+echo "🏗️  Infrastructure Tools:"
+echo -n "   Terraform: "
+terraform --version 2>/dev/null | head -1 || echo "Not installed"
+
+echo ""
+
+# GitHub tools
+echo "🐙 GitHub Tools:"
+echo -n "   GitHub CLI: "
+gh --version 2>/dev/null | head -1 || echo "Not installed"
+
+echo ""
+
+# Claude CLI (if available)
+echo "🤖 AI Tools:"
+echo -n "   Claude CLI: "
+claude --version 2>/dev/null || echo "Not installed (will be installed via npm during setup)"
+
+echo ""
+
+# Container info
+echo "📦 Container Information:"
+echo "   User: $(whoami)"
+echo "   Home: $HOME"
+echo "   Workspace: ${WORKSPACE:-/workspaces/claude-codespace}"
+echo "   Shell: $SHELL"
+echo ""
+
+# Check if in DevContainer
+if [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ]; then
+    echo "✅ Running in DevContainer environment"
+else
+    echo "⚠️  Not running in DevContainer environment"
+fi
+
+echo ""
+echo "=================================="
+echo "✅ Version check complete"

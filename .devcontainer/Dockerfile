@@ -1,37 +1,49 @@
-FROM node:latest
+# Minimal Dockerfile - leveraging devcontainer features for most tools
+# Base image: Ubuntu LTS
 
-RUN apt-get update && apt-get install -y ca-certificates curl && \
-    update-ca-certificates
+FROM ubuntu:22.04
 
-# Install Azure CLI with robust installation method
-RUN apt-get update && apt-get install -y jq bc apt-transport-https lsb-release gnupg && \
-    # Create keyring directory if it doesn't exist
-    mkdir -p /etc/apt/keyrings && \
-    # Download and add Microsoft GPG key with better error handling
-    curl -sLS https://packages.microsoft.com/keys/microsoft.asc | \
-    gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg && \
-    # Set proper permissions on the keyring
-    chmod 644 /etc/apt/keyrings/microsoft.gpg && \
-    # Add Azure CLI repository with signed-by option
-    AZ_REPO=$(lsb_release -cs) && \
-    echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | \
-    tee /etc/apt/sources.list.d/azure-cli.list && \
-    # Update package list and install Azure CLI
-    apt-get update && \
-    apt-get install -y azure-cli
+# Install basic packages
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    tar \
+    gzip \
+    unzip \
+    git \
+    sudo \
+    ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Claude CLI via NPM
-# Note: This installation might fail in corporate environments with SSL issues
-# If it fails, see manual installation instructions in README
-RUN npm install -g @anthropic-ai/claude-code || \
-    (echo "WARNING: Claude CLI installation failed. This might be due to SSL/proxy issues." && \
-     echo "You may need to manually install Claude after the container starts." && \
-     echo "See README for corporate environment setup instructions." && \
-     exit 0)
+# Install aztfexport (no official image or feature available)
+ARG AZTFEXPORT_VERSION=0.18.0
+RUN wget "https://github.com/Azure/aztfexport/releases/download/v${AZTFEXPORT_VERSION}/aztfexport_v${AZTFEXPORT_VERSION}_linux_amd64.zip" \
+    && unzip aztfexport_v${AZTFEXPORT_VERSION}_linux_amd64.zip \
+    && chmod +x aztfexport \
+    && mv aztfexport /usr/local/bin/ \
+    && rm aztfexport_v${AZTFEXPORT_VERSION}_linux_amd64.zip
 
-# Verify Claude CLI installation (allow failure)
-RUN claude --version 2>/dev/null || \
-    echo "Claude CLI not installed yet - manual installation required"
+# Copy and run shell configuration script
+COPY scripts/shell-config.sh /tmp/shell-config.sh
+RUN chmod +x /tmp/shell-config.sh && \
+    /tmp/shell-config.sh && \
+    rm /tmp/shell-config.sh
 
-# Create a symlink to ensure Claude is available in the expected location
-RUN ln -sf /usr/local/bin/claude /usr/bin/claude 2>/dev/null || true
+# Copy version check script
+COPY scripts/check-versions /usr/local/bin/check-versions
+RUN chmod +x /usr/local/bin/check-versions
+
+# Create directories
+RUN mkdir -p /workspaces /host
+
+# Set environment
+ENV SHELL=/bin/bash
+
+# Note: User creation is handled by devcontainer features (common-utils)
+WORKDIR /workspaces
+
+# Labels
+LABEL description="Azure/Terraform Dev Container with DevContainer Features" \
+      base="ubuntu:22.04" \
+      features="azure-cli,terraform,node,github-cli"

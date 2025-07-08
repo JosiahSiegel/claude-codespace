@@ -1,0 +1,16 @@
+# Terraform CLI Configuration
+# This file is referenced by TF_CLI_CONFIG_FILE environment variable
+
+# Provider installation configuration
+provider_installation {
+  filesystem_mirror {
+    path    = "/home/vscode/.terraform.d/providers"
+    include = ["*/*"]
+  }
+  direct {
+    exclude = []
+  }
+}
+
+# Disable upgrade and security check notifications in DevContainer
+disable_checkpoint = true
