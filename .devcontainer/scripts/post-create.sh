@@ -7,29 +7,6 @@ set -e
 
 echo "🚀 Running post-create setup..."
 
-# Install Claude Code CLI
-echo "📦 Installing Claude Code CLI..."
-if ! command -v claude &> /dev/null; then
-    # Install Claude CLI globally using the official package name
-    # Note: Do NOT use sudo as per Anthropic documentation
-    npm install -g @anthropic-ai/claude-code --force --no-os-check
-    
-    # Check if Claude CLI is now available
-    if command -v claude &> /dev/null; then
-        echo "✅ Claude CLI installed successfully"
-        # Create symlink at standard location for Roo Code extension
-        if [ ! -f "/usr/bin/claude" ] && [ -f "$(which claude)" ]; then
-            sudo ln -sf "$(which claude)" /usr/bin/claude
-            echo "🔗 Created symlink at /usr/bin/claude for Roo Code extension"
-        fi
-    else
-        echo "⚠️  Claude CLI installation completed but not found in PATH"
-        echo "    This may be normal during container build - it will be available after restart"
-    fi
-else
-    echo "✅ Claude CLI already installed at: $(which claude)"
-fi
-
 # Set up npm global directory for non-root user (avoid conflict with nvm)
 echo "🔧 Configuring npm for user..."
 mkdir -p /home/vscode/.npm-global
@@ -37,8 +14,39 @@ mkdir -p /home/vscode/.npm-global
 if ! command -v nvm &> /dev/null && [ ! -d "$HOME/.nvm" ]; then
     npm config set prefix '/home/vscode/.npm-global'
     echo "✅ npm prefix configured"
+    # Add npm global bin to PATH for this session
+    export PATH="/home/vscode/.npm-global/bin:$PATH"
 else
     echo "✅ nvm detected, skipping npm prefix configuration"
+fi
+
+# Install Claude Code CLI
+echo "📦 Installing Claude Code CLI..."
+if ! command -v claude &> /dev/null; then
+    # Install Claude CLI globally using the official package name
+    # npm prefix is configured above to use user-writable directory
+    npm install -g @anthropic-ai/claude-code --force --no-os-check
+    
+    # Check if Claude CLI is now available (check both system PATH and npm global)
+    if command -v claude &> /dev/null; then
+        echo "✅ Claude CLI installed successfully"
+        CLAUDE_PATH=$(which claude)
+    elif [ -f "/home/vscode/.npm-global/bin/claude" ]; then
+        echo "✅ Claude CLI installed in npm global directory"
+        CLAUDE_PATH="/home/vscode/.npm-global/bin/claude"
+    else
+        echo "⚠️  Claude CLI installation completed but not found in PATH"
+        echo "    This may be normal during container build - it will be available after restart"
+        CLAUDE_PATH=""
+    fi
+    
+    # Create symlink at standard location for Roo Code extension
+    if [ -n "$CLAUDE_PATH" ] && [ ! -f "/usr/bin/claude" ]; then
+        sudo ln -sf "$CLAUDE_PATH" /usr/bin/claude
+        echo "🔗 Created symlink at /usr/bin/claude for Roo Code extension"
+    fi
+else
+    echo "✅ Claude CLI already installed at: $(which claude)"
 fi
 
 # Set up SSH directory (handle readonly mount gracefully)

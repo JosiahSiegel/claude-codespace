@@ -6,6 +6,11 @@
 # Create shell aliases
 cat >> /etc/bash.bashrc << 'EOF'
 
+# Add npm global bin to PATH (for Claude CLI and other global packages)
+if [ -d "$HOME/.npm-global/bin" ]; then
+    export PATH="$HOME/.npm-global/bin:$PATH"
+fi
+
 # Fix npm/nvm conflicts on shell startup
 if [ -f "$HOME/.npmrc" ] && command -v nvm &> /dev/null; then
     npm config delete prefix 2>/dev/null || true
