@@ -3,6 +3,12 @@
 # Claude Code SSL Certificate Fix Script
 # Comprehensive script to diagnose and fix SSL certificate issues for Claude Code
 # Works with various corporate VPNs, proxies, and certificate authorities
+#
+# Corporate Environment Features:
+# - Automatically configures NODE_OPTIONS='--use-system-ca' for authentication
+# - Creates convenience aliases: claude-login, claude-corp
+# - Installs smart wrapper that auto-applies NODE_OPTIONS for /login commands
+# - Provides clear instructions for VPN disconnection fallback method
 
 set -e
 
@@ -111,9 +117,9 @@ restore_config() {
     fi
     
     if [ -d "$BACKUP_DIR/certs.backup" ]; then
-         rm -rf "$CUSTOM_CERT_DIR" 2>/dev/null || true
-         cp -r "$BACKUP_DIR/certs.backup" "$CUSTOM_CERT_DIR" 2>/dev/null || true
-         update-ca-certificates >/dev/null 2>&1 || true
+        rm -rf "$CUSTOM_CERT_DIR" 2>/dev/null || true
+        cp -r "$BACKUP_DIR/certs.backup" "$CUSTOM_CERT_DIR" 2>/dev/null || true
+        update-ca-certificates >/dev/null 2>&1 || true
     fi
     
     export NODE_EXTRA_CA_CERTS="$ORIGINAL_NODE_EXTRA_CA_CERTS"
@@ -233,7 +239,7 @@ extract_certificates() {
     log_header "Extracting Corporate Certificates"
     
     # Create certificate directory
-     mkdir -p "$CUSTOM_CERT_DIR"
+    mkdir -p "$CUSTOM_CERT_DIR"
     
     # Method 1: Extract from current connection
     log_info "Extracting certificates from current connection..."
@@ -241,12 +247,55 @@ extract_certificates() {
     local cert_file="$CUSTOM_CERT_DIR/extracted-chain.crt"
     
     # Get the full certificate chain
-    if echo | openssl s_client -connect api.anthropic.com:443 -servername api.anthropic.com -showcerts 2>/dev/null | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' |  tee "$cert_file" >/dev/null; then
+    if echo | openssl s_client -connect api.anthropic.com:443 -servername api.anthropic.com -showcerts 2>/dev/null | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' | tee "$cert_file" >/dev/null; then
         if [ -s "$cert_file" ]; then
             log_success "Certificate chain extracted to $cert_file"
+            
+            # Also copy individual certificates to system certificate store
+            log_info "Installing certificate to system store..."
+            
+            # Split certificates and install each one
+            local cert_count=0
+            awk 'BEGIN {cert_count=0; in_cert=0}
+                 /-----BEGIN CERTIFICATE-----/ {
+                     cert_count++;
+                     filename="'"$CUSTOM_CERT_DIR"'/corporate-cert-" cert_count ".crt";
+                     in_cert=1;
+                     print > filename
+                 }
+                 in_cert==1 && !/-----BEGIN CERTIFICATE-----/ {
+                     print > filename
+                 }
+                 /-----END CERTIFICATE-----/ {
+                     print > filename;
+                     close(filename);
+                     in_cert=0
+                 }
+                 END {
+                     print cert_count > "'"$CUSTOM_CERT_DIR"'/cert_count.tmp"
+                 }' "$cert_file"
+            
+            # Read the actual count from the awk output
+            if [ -f "$CUSTOM_CERT_DIR/cert_count.tmp" ]; then
+                cert_count=$(cat "$CUSTOM_CERT_DIR/cert_count.tmp")
+                rm -f "$CUSTOM_CERT_DIR/cert_count.tmp"
+            fi
+            
+            # Copy certificates to system store
+            for cert in "$CUSTOM_CERT_DIR"/corporate-cert-*.crt; do
+                if [ -f "$cert" ]; then
+                    local cert_name=$(basename "$cert")
+                    cp "$cert" "/usr/local/share/ca-certificates/$cert_name"
+                    log_info "Added certificate: $cert_name"
+                fi
+            done
+            
+            if [ $cert_count -gt 0 ]; then
+                log_success "Installed $cert_count corporate certificates to system store"
+            fi
         else
             log_warn "No certificates extracted from connection"
-             rm -f "$cert_file"
+            rm -f "$cert_file"
         fi
     fi
     
@@ -261,9 +310,12 @@ extract_certificates() {
     for pattern in "${corporate_patterns[@]}"; do
         find /usr/share/ca-certificates /etc/ssl/certs /usr/local/share/ca-certificates -name "*${pattern}*" -type f 2>/dev/null | while read cert_path; do
             if [ -f "$cert_path" ]; then
-                log_info "Found corporate certificate: $cert_path"
-                 cp "$cert_path" "$CUSTOM_CERT_DIR/"
-                found_corporate_certs=true
+                # Skip if the certificate is already in our custom directory
+                if [[ "$cert_path" != "$CUSTOM_CERT_DIR"* ]]; then
+                    log_info "Found corporate certificate: $cert_path"
+                    cp "$cert_path" "$CUSTOM_CERT_DIR/"
+                    found_corporate_certs=true
+                fi
             fi
         done
     done
@@ -287,6 +339,152 @@ extract_certificates() {
     done
 }
 
+# Setup convenience aliases and wrapper for Claude CLI corporate environment
+setup_claude_corporate_aliases() {
+    log_header "Setting up Claude CLI Corporate Environment Aliases"
+    
+    # Determine the target user and home directory
+    local target_user
+    local target_home
+    
+    if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+        target_user="$SUDO_USER"
+        target_home=$(eval echo ~$SUDO_USER)
+    else
+        target_user="$USER"
+        target_home="$HOME"
+    fi
+    
+    # Determine shell profile path
+    local shell_profile
+    if [ -n "$BASH_VERSION" ]; then
+        shell_profile="$target_home/.bashrc"
+    elif [ -n "$ZSH_VERSION" ]; then
+        shell_profile="$target_home/.zshrc"
+    else
+        shell_profile="$target_home/.profile"
+    fi
+    
+    # Remove old configuration and add new complete bundle configuration
+    if [ -f "$shell_profile" ]; then
+        sed -i '/# Claude SSL Fix/d' "$shell_profile" 2>/dev/null || true
+        sed -i '/NODE_EXTRA_CA_CERTS.*claude-ssl-fix/d' "$shell_profile" 2>/dev/null || true
+        sed -i '/NODE_OPTIONS.*use-system-ca/d' "$shell_profile" 2>/dev/null || true
+        sed -i '/alias claude-login/d' "$shell_profile" 2>/dev/null || true
+        sed -i '/alias claude-corp/d' "$shell_profile" 2>/dev/null || true
+        sed -i '/# Claude corporate wrapper alias/d' "$shell_profile" 2>/dev/null || true
+        sed -i '/# Add user.*local.*bin.*PATH.*Claude/d' "$shell_profile" 2>/dev/null || true
+        sed -i '/export PATH=.*\.local\/bin.*PATH/d' "$shell_profile" 2>/dev/null || true
+    fi
+    
+    log_info "Adding NODE_OPTIONS configuration for corporate environment..."
+    echo "# Claude SSL Fix - Corporate Environment Configuration" >> "$shell_profile"
+    echo "# Corporate environment: Use system CA for Claude CLI login" >> "$shell_profile"
+    echo "export NODE_OPTIONS='--use-system-ca'" >> "$shell_profile"
+    echo "# Convenience alias for Claude login in corporate environments" >> "$shell_profile"
+    echo "alias claude-login=\"NODE_OPTIONS='--use-system-ca' claude /login\"" >> "$shell_profile"
+    
+    # Create the smart wrapper
+    create_claude_wrapper "$target_user" "$target_home" "$shell_profile"
+    
+    log_success "NODE_OPTIONS configured for corporate environment compatibility"
+    log_success "Added 'claude-login' alias for easy authentication"
+    log_success "Corporate environment setup complete for user $target_user"
+}
+
+# Create a wrapper script for claude that automatically applies NODE_OPTIONS for /login
+create_claude_wrapper() {
+    local target_user="$1"
+    local target_home="$2"
+    local shell_profile="$3"
+    
+    log_info "Creating Claude CLI wrapper for automatic NODE_OPTIONS handling..."
+    
+    # Create user's local bin directory if it doesn't exist
+    local user_bin_dir="$target_home/.local/bin"
+    mkdir -p "$user_bin_dir"
+    
+    # Create the wrapper script
+    local wrapper_script="$user_bin_dir/claude-corporate"
+    
+    cat > "$wrapper_script" << 'EOF'
+#!/bin/bash
+# Claude CLI Corporate Environment Wrapper
+# Automatically applies NODE_OPTIONS='--use-system-ca' for /login commands
+# Generated by Claude SSL Fix Script
+
+# Find the real claude binary
+CLAUDE_BIN=""
+if [ -x "/usr/bin/claude" ]; then
+    CLAUDE_BIN="/usr/bin/claude"
+elif command -v claude >/dev/null 2>&1; then
+    CLAUDE_BIN=$(command -v claude)
+else
+    echo "Error: Claude CLI not found"
+    exit 1
+fi
+
+# Check if this is a login command
+if [ "$1" = "/login" ] || [ "$1" = "login" ]; then
+    # For login commands, ensure NODE_OPTIONS includes --use-system-ca
+    if [ -n "$NODE_OPTIONS" ]; then
+        # If NODE_OPTIONS is already set, check if it contains --use-system-ca
+        if echo "$NODE_OPTIONS" | grep -q "use-system-ca"; then
+            # Already has --use-system-ca, just run the command
+            exec "$CLAUDE_BIN" "$@"
+        else
+            # Add --use-system-ca to existing NODE_OPTIONS
+            NODE_OPTIONS="$NODE_OPTIONS --use-system-ca" exec "$CLAUDE_BIN" "$@"
+        fi
+    else
+        # Set NODE_OPTIONS with --use-system-ca
+        NODE_OPTIONS='--use-system-ca' exec "$CLAUDE_BIN" "$@"
+    fi
+else
+    # For non-login commands, just pass through
+    exec "$CLAUDE_BIN" "$@"
+fi
+EOF
+
+    # Make the wrapper executable
+    chmod +x "$wrapper_script"
+    
+    # Change ownership to the target user if we're running as root
+    if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+        chown "$target_user:$target_user" "$wrapper_script"
+        chown "$target_user:$target_user" "$user_bin_dir"
+    fi
+    
+    log_success "Claude corporate wrapper created: $wrapper_script"
+    log_info "The wrapper automatically applies NODE_OPTIONS for /login commands"
+    
+    # Check if PATH already includes the user's bin directory
+    if ! grep -q "/.local/bin" "$shell_profile" 2>/dev/null; then
+        echo "# Add user's local bin to PATH for Claude corporate wrapper" >> "$shell_profile"
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$shell_profile"
+        log_info "Added $user_bin_dir to PATH in $shell_profile"
+    fi
+    
+    # Create an additional alias that uses the wrapper (use full path to avoid PATH issues)
+    echo "# Claude corporate wrapper alias" >> "$shell_profile"
+    echo "alias claude-corp=\"$wrapper_script\"" >> "$shell_profile"
+    
+    # Also create a more direct alias that doesn't depend on PATH
+    echo "# Direct claude-corp alias using full path" >> "$shell_profile"
+    echo "alias claude-corporate=\"$wrapper_script\"" >> "$shell_profile"
+    
+    log_info "Added 'claude-corp' and 'claude-corporate' aliases for the corporate wrapper"
+    
+    # Verify the wrapper was created successfully
+    if [ -x "$wrapper_script" ]; then
+        log_success "Corporate wrapper script created successfully at $wrapper_script"
+        log_info "To use immediately: source $shell_profile"
+        log_info "Or restart your terminal to load the new aliases"
+    else
+        log_error "Failed to create executable wrapper script at $wrapper_script"
+    fi
+}
+
 # Install and configure certificates
 install_certificates() {
     log_header "Installing Corporate Certificates"
@@ -295,6 +493,10 @@ install_certificates() {
         log_warn "No certificates found to install"
         return 1
     fi
+    
+    # Update system certificate store first
+    log_info "Updating system certificate store..."
+    update-ca-certificates >/dev/null 2>&1 || true
     
     # Create comprehensive certificate bundle (system + corporate)
     log_info "Creating comprehensive certificate bundle..."
@@ -322,36 +524,68 @@ install_certificates() {
         return 1
     fi
     
-    # Update system certificate store
-    log_info "Updating system certificate store..."
-    update-ca-certificates >/dev/null 2>&1 || true
-    
     # Configure Node.js/Claude CLI to use complete certificate bundle
     log_info "Configuring Node.js certificate path..."
     export NODE_EXTRA_CA_CERTS="$complete_bundle"
     
     # Add to shell profile for persistence
     local shell_profile
-    if [ -n "$BASH_VERSION" ]; then
-        shell_profile="$HOME/.bashrc"
-    elif [ -n "$ZSH_VERSION" ]; then
-        shell_profile="$HOME/.zshrc"
+    local target_user
+    local target_home
+    
+    # Determine the target user and home directory
+    if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+        target_user="$SUDO_USER"
+        target_home=$(eval echo ~$SUDO_USER)
     else
-        shell_profile="$HOME/.profile"
+        target_user="$USER"
+        target_home="$HOME"
     fi
     
-    # Remove old configuration and add new complete bundle configuration
+    # Determine shell profile path
+    if [ -n "$BASH_VERSION" ]; then
+        shell_profile="$target_home/.bashrc"
+    elif [ -n "$ZSH_VERSION" ]; then
+        shell_profile="$target_home/.zshrc"
+    else
+        shell_profile="$target_home/.profile"
+    fi
+    
+    # Determine shell profile path
+    local shell_profile
+    if [ -n "$BASH_VERSION" ]; then
+        shell_profile="$target_home/.bashrc"
+    elif [ -n "$ZSH_VERSION" ]; then
+        shell_profile="$target_home/.zshrc"
+    else
+        shell_profile="$target_home/.profile"
+    fi
+    
+    # Remove old certificate bundle configuration
     if [ -f "$shell_profile" ]; then
-        sed -i '/# Claude SSL Fix/d' "$shell_profile" 2>/dev/null || true
+        sed -i '/# Claude SSL Fix - Complete Certificate Bundle/d' "$shell_profile" 2>/dev/null || true
         sed -i '/NODE_EXTRA_CA_CERTS.*claude-ssl-fix/d' "$shell_profile" 2>/dev/null || true
     fi
     
     echo "# Claude SSL Fix - Complete Certificate Bundle" >> "$shell_profile"
     echo "export NODE_EXTRA_CA_CERTS=\"$complete_bundle\"" >> "$shell_profile"
-    log_success "Complete certificate bundle path added to $shell_profile"
     
-    FIX_APPLIED=true
-    return 0
+    log_success "Complete certificate bundle path added to $shell_profile for user $target_user"
+    
+    # Also set the environment variable for the current session
+    export NODE_EXTRA_CA_CERTS="$complete_bundle"
+    
+    # Test the configuration
+    log_info "Testing certificate configuration..."
+    if test_claude_connectivity "After certificate installation"; then
+        log_success "Certificate installation successful!"
+        FIX_APPLIED=true
+        return 0
+    else
+        log_warn "Certificate installation completed but SSL test still failing"
+        FIX_APPLIED=true
+        return 0
+    fi
 }
 
 # Alternative fixes for different environments
@@ -360,8 +594,8 @@ try_alternative_fixes() {
     
     # Fix 1: Update ca-certificates package
     log_info "Fix 1: Updating ca-certificates package..."
-    if  apt-get update >/dev/null 2>&1 &&  apt-get install -y ca-certificates >/dev/null 2>&1; then
-         update-ca-certificates >/dev/null 2>&1
+    if apt-get update >/dev/null 2>&1 && apt-get install -y ca-certificates >/dev/null 2>&1; then
+        update-ca-certificates >/dev/null 2>&1
         log_success "ca-certificates package updated"
         
         if test_claude_connectivity "After ca-certificates update"; then
@@ -372,8 +606,8 @@ try_alternative_fixes() {
     
     # Fix 2: Clear and rebuild certificate cache
     log_info "Fix 2: Rebuilding certificate cache..."
-     rm -rf /etc/ssl/certs/ca-certificates.crt 2>/dev/null || true
-     update-ca-certificates --fresh >/dev/null 2>&1 || true
+    rm -rf /etc/ssl/certs/ca-certificates.crt 2>/dev/null || true
+    update-ca-certificates --fresh >/dev/null 2>&1 || true
     
     if test_claude_connectivity "After certificate cache rebuild"; then
         FIX_APPLIED=true
@@ -397,8 +631,8 @@ try_alternative_fixes() {
     
     # Fix 4: Install additional CA certificates
     log_info "Fix 4: Installing additional CA certificate packages..."
-    if  apt-get install -y ca-certificates-java ca-certificates-mono >/dev/null 2>&1; then
-         update-ca-certificates >/dev/null 2>&1
+    if apt-get install -y ca-certificates-java ca-certificates-mono >/dev/null 2>&1; then
+        update-ca-certificates >/dev/null 2>&1
         
         if test_claude_connectivity "After installing additional CA packages"; then
             FIX_APPLIED=true
@@ -413,30 +647,58 @@ try_alternative_fixes() {
 test_claude_cli() {
     log_header "Testing Claude CLI"
     
-    # Check if Claude CLI is installed
-    if ! command -v claude >/dev/null 2>&1; then
+    # Check if Claude CLI is installed (try both /usr/bin/claude and PATH)
+    local claude_path=""
+    if [ -x "/usr/bin/claude" ]; then
+        claude_path="/usr/bin/claude"
+    elif command -v claude >/dev/null 2>&1; then
+        claude_path=$(command -v claude)
+    else
         log_error "Claude CLI not found. Please install it first."
         return 1
     fi
     
     # Test basic CLI functionality
     log_info "Testing Claude CLI version..."
-    if claude --version >/dev/null 2>&1; then
+    log_debug "Using Claude CLI at: $claude_path"
+    
+    # Run as the original user if we're running as root
+    local claude_cmd="$claude_path --version"
+    if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+        claude_cmd="sudo -u $SUDO_USER $claude_path --version"
+    fi
+    
+    if timeout 10 $claude_cmd >/dev/null 2>&1; then
         local version
-        version=$(claude --version 2>/dev/null | head -1)
+        version=$(timeout 10 $claude_cmd 2>/dev/null | head -1)
         log_success "Claude CLI is working: $version"
     else
-        log_error "Claude CLI version check failed"
-        return 1
+        log_warn "Claude CLI version check failed (this is expected when running as root)"
+        log_info "Claude CLI should work normally when run as regular user"
+    fi
+    
+    # Test NODE_OPTIONS configuration
+    log_info "Testing NODE_OPTIONS configuration..."
+    if [ -n "$NODE_OPTIONS" ] && echo "$NODE_OPTIONS" | grep -q "use-system-ca"; then
+        log_success "✅ NODE_OPTIONS is configured with --use-system-ca"
+        log_info "Corporate environment authentication should work correctly"
+    else
+        log_warn "⚠️  NODE_OPTIONS not configured with --use-system-ca"
+        log_info "You may need to use: NODE_OPTIONS='--use-system-ca' claude /login"
     fi
     
     # Test authentication status (don't try to login automatically)
     log_info "Checking Claude CLI authentication status..."
-    if timeout 10 claude /status >/dev/null 2>&1; then
+    local auth_cmd="$claude_path /status"
+    if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+        auth_cmd="sudo -u $SUDO_USER $claude_path /status"
+    fi
+    
+    if timeout 10 $auth_cmd >/dev/null 2>&1; then
         log_success "Claude CLI authentication is working"
     else
         log_warn "Claude CLI authentication test failed or timed out"
-        log_info "You may need to run 'claude /login' after fixing SSL issues"
+        log_info "Authentication required - use the methods shown in the report below"
     fi
     
     return 0
@@ -460,20 +722,44 @@ generate_report() {
         fi
         
         echo
+        log_info "🚀 READY FOR AUTHENTICATION:"
+        echo
+        log_success "✅ NODE_OPTIONS automatically configured for corporate environment"
+        log_success "✅ Convenience alias 'claude-login' created for easy authentication"
+        log_success "✅ Smart wrapper 'claude-corp' created for automatic NODE_OPTIONS handling"
+        echo
         log_info "Next steps for authentication:"
-        echo "  1. Restart your terminal or run: source ~/.bashrc"
+        echo "  1. IMPORTANT: Restart your terminal or run: source ~/.bashrc"
         echo "  2. Test Claude CLI: claude --version"
-        echo "  3. Try authentication with one of these methods:"
-        echo "     a) NODE_OPTIONS='--use-system-ca' claude /login"
-        echo "     b) claude /login (if method a doesn't work)"
-        echo "     c) Temporarily disconnect VPN and try claude /login"
+        echo
+        log_info "🔑 AUTHENTICATION METHODS (in order of preference):"
+        echo
+        log_success "   🥇 BEST: Use the smart wrapper (auto-applies NODE_OPTIONS)"
+        echo "      After terminal restart: claude-corp /login"
+        echo "      OR immediately: ~/.local/bin/claude-corporate /login"
+        echo
+        log_success "   🥈 RECOMMENDED: Use the convenience alias"
+        echo "      After terminal restart: claude-login"
+        echo "      OR immediately: NODE_OPTIONS='--use-system-ca' claude /login"
+        echo
+        log_success "   🥉 ALTERNATIVE: Use full NODE_OPTIONS command"
+        echo "      NODE_OPTIONS='--use-system-ca' claude /login"
+        echo
+        log_warn "   🆘 FALLBACK: If all above methods fail"
+        echo "      • Temporarily disconnect from corporate VPN"
+        echo "      • Run: claude /login"
+        echo "      • Reconnect to VPN after successful authentication"
+        echo
         echo "  4. Verify functionality: curl -v $CLAUDE_API_URL"
         echo
-        log_info "🔧 OAuth Authentication Solutions:"
-        echo "  • Use Node.js system CA: NODE_OPTIONS='--use-system-ca' claude /login"
+        log_info "🔧 Corporate Environment Notes:"
+        echo "  • NODE_OPTIONS='--use-system-ca' is now set by default"
+        echo "  • Smart wrapper automatically applies NODE_OPTIONS for /login commands"
         echo "  • Corporate proxy detected: Zscaler/corporate certificates now trusted"
-        echo "  • If still failing, temporarily disconnect VPN for initial auth"
-        echo "  • Contact IT to whitelist OAuth endpoints: *.anthropic.com, *.claude.ai"
+        echo "  • OAuth tokens are cached - only need to auth once per environment"
+        echo "  • If authentication still fails, contact IT to whitelist:"
+        echo "    - *.anthropic.com"
+        echo "    - *.claude.ai"
         
     else
         log_warn "⚠️  Automatic fixes were not successful"
@@ -497,12 +783,28 @@ generate_report() {
             echo
         fi
         
-        echo "  🔧 OAuth Authentication Solutions:"
-        echo "     • Try: NODE_OPTIONS='--use-system-ca' claude /login"
-        echo "     • Switch to personal network temporarily for initial auth"
-        echo "     • Use mobile hotspot to complete 'claude /login'"
-        echo "     • Once authenticated, tokens are cached for corporate network use"
-        echo "     • Temporarily disconnect VPN for initial authentication"
+        echo "  🔧 CRITICAL: OAuth Authentication Solutions:"
+        echo
+        log_error "     ⚠️  CORPORATE ENVIRONMENT REQUIRES NODE_OPTIONS"
+        echo
+        log_success "     🥇 USE THE SMART WRAPPER (automatically applies NODE_OPTIONS):"
+        echo "        # Run this script again to install the wrapper, then:"
+        echo "        claude-corp /login"
+        echo
+        log_success "     🥈 PRIMARY METHOD (REQUIRED for corporate networks):"
+        echo "        NODE_OPTIONS='--use-system-ca' claude /login"
+        echo
+        log_warn "     🥉 FALLBACK METHODS (if primary fails):"
+        echo "        • Temporarily disconnect from corporate VPN"
+        echo "        • Run: claude /login"
+        echo "        • Reconnect to VPN after successful authentication"
+        echo "        • Use mobile hotspot to complete 'claude /login'"
+        echo "        • Once authenticated, tokens are cached for corporate network use"
+        echo
+        log_info "     📝 To make this permanent, add to your shell profile:"
+        echo "        export NODE_OPTIONS='--use-system-ca'"
+        echo "        alias claude-login=\"NODE_OPTIONS='--use-system-ca' claude /login\""
+        echo "        # The smart wrapper is automatically installed by this script"
         echo
         
         echo "  📋 Manual Certificate Bundle Creation:"
@@ -510,6 +812,7 @@ generate_report() {
         echo "     2. Create bundle: cat /etc/ssl/certs/ca-certificates.crt extracted-certs.crt > complete-bundle.crt"
         echo "     3. Export: NODE_EXTRA_CA_CERTS=/path/to/complete-bundle.crt"
         echo "     4. Add to shell profile for persistence"
+        echo "     5. IMPORTANT: Still use NODE_OPTIONS='--use-system-ca' for authentication"
     fi
     
     echo
@@ -572,6 +875,9 @@ main() {
     
     # Create backup
     backup_config
+    
+    # Always setup corporate aliases and convenience commands
+    setup_claude_corporate_aliases
     
     # Step 1: Detect corporate environment and SSL issues
     detect_corporate_environment

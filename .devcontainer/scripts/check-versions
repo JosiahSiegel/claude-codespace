@@ -85,3 +85,5 @@ fi
 echo ""
 echo "=================================="
 echo "✅ Version check complete"
+echo ""
+echo "🕐 Date: $(date)"
