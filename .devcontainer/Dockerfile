@@ -22,9 +22,10 @@ RUN chmod +x /tmp/shell-config.sh && \
     /tmp/shell-config.sh && \
     rm /tmp/shell-config.sh
 
-# Copy version check script
+# Copy helper scripts
 COPY scripts/check-versions /usr/local/bin/check-versions
-RUN chmod +x /usr/local/bin/check-versions
+COPY scripts/devcontainer-help /usr/local/bin/devcontainer-help
+RUN chmod +x /usr/local/bin/check-versions /usr/local/bin/devcontainer-help
 
 # Create directories and set ownership
 RUN mkdir -p /workspaces /host /home/vscode/.azure /home/vscode/.terraform.d \

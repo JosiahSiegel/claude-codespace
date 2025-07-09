@@ -99,3 +99,31 @@ echo ""
 echo "💡 Run 'check-versions' for detailed version information"
 echo "💡 Run '.devcontainer/scripts/fix-port-forwarding.sh' if experiencing port issues"
 echo ""
+echo "📚 Run 'devcontainer-help' for comprehensive help and documentation"
+echo ""
+echo "🕐 Date: $(date)"
+echo ""
+
+# Create symlinks for Windows drive letters under /mnt
+echo "🔗 Setting up Windows drive letter symlinks..."
+if [ -d "/host/mnt/host" ]; then
+    # Create /mnt directory if it doesn't exist
+    sudo mkdir -p /mnt
+    
+    # Find all drive letters and create symlinks
+    for drive in /host/mnt/host/*; do
+        if [ -d "$drive" ]; then
+            drive_letter=$(basename "$drive")
+            if [ ! -e "/mnt/$drive_letter" ]; then
+                sudo ln -s "$drive" "/mnt/$drive_letter"
+                echo "   ✅ Created symlink: /mnt/$drive_letter -> $drive"
+            else
+                echo "   ℹ️  Symlink already exists: /mnt/$drive_letter"
+            fi
+        fi
+    done
+    echo "   ✅ Windows drive symlinks setup complete"
+else
+    echo "   ℹ️  No Windows drives detected (not running on WSL2)"
+fi
+echo ""

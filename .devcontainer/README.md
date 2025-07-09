@@ -22,7 +22,7 @@ claude
 claude --version
 
 # Fix network issues (corporate environments)
-./scripts/fix-claude-ssl.sh
+sudo .devcontainer/scripts/fix-claude-ssl.sh
 ```
 
 ## Configuration Files

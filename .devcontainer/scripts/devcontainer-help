@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# DevContainer Help Documentation
+
+cat << 'EOF'
+🚀 Claude DevContainer Help & Documentation
+==========================================
+
+📚 QUICK REFERENCE
+-----------------
+claude --version        # Check Claude CLI version
+check-versions         # Display all tool versions
+devcontainer-help      # Show this help
+
+🔐 CORPORATE SSL SETUP
+---------------------
+sudo .devcontainer/scripts/fix-claude-ssl.sh  # Fix SSL certificates
+
+After SSL fix, login with:
+- claude-corp /login                    # Smart wrapper (recommended)
+- claude-login                          # Quick alias
+- NODE_OPTIONS='--use-system-ca' claude /login  # Manual method
+
+🛠️ AVAILABLE TOOLS
+-----------------
+- Claude CLI:    AI assistant (pre-installed)
+- Azure CLI:     Cloud management
+- Terraform:     Infrastructure as code
+- aztfexport:    Export Azure resources
+- GitHub CLI:    Repository management
+- Node.js/npm:   JavaScript runtime
+- Docker:        Container management
+
+📁 FILE PATHS
+------------
+Workspace:    /workspaces/claude-codespace
+Host drives:  /mnt/c, /mnt/d (Windows)
+Full host:    /host (complete filesystem)
+
+🔧 COMMON COMMANDS
+-----------------
+# Test environment
+claude --version
+check-versions
+
+# Azure operations
+az login
+az account list
+
+# Terraform
+terraform init
+terraform plan
+
+# Git/GitHub
+git status
+gh repo list
+
+💡 TIPS & BEST PRACTICES
+-----------------------
+1. Always work in /workspaces/claude-codespace
+2. Use relative paths when possible
+3. For corporate networks, run SSL fix first
+4. Use @filename in Roo Code for context
+5. Check active terminals before starting services
+
+🚨 TROUBLESHOOTING
+-----------------
+SSL Errors:
+- Run: sudo .devcontainer/scripts/fix-claude-ssl.sh
+- Alternative: Disconnect VPN → login → reconnect
+
+Port Forwarding:
+- Check: .devcontainer/scripts/fix-port-forwarding.sh
+- VS Code should auto-forward ports
+
+Command Not Found:
+- Reload terminal: exec $SHELL
+- Check PATH: echo $PATH
+
+📖 MORE INFORMATION
+------------------
+Project: https://github.com/your-org/claude-codespace
+Issues:  Report problems in GitHub Issues
+
+==========================================
+EOF

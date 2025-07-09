@@ -1,5 +1,5 @@
 {
-  "name": "Claude Code DevContainer (Multi-stage)",
+  "name": "Claude Code DevContainer",
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
@@ -107,6 +107,6 @@
   "hostRequirements": {
     "cpus": 2,
     "memory": "4gb",
-    "storage": "32gb"
+    "storage": "8gb"
   }
 }

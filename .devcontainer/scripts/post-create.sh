@@ -128,8 +128,10 @@ echo "🔌 Setting up MCP server configuration..."
 mkdir -p /home/vscode/.config/mcp
 chown vscode:vscode /home/vscode/.config/mcp
 
-# Install check-versions script globally (backup in case Dockerfile didn't install it)
-echo "🔧 Installing check-versions script..."
+# Install helper scripts globally (backup in case Dockerfile didn't install them)
+echo "🔧 Installing helper scripts..."
+
+# Install check-versions
 if [ -f ".devcontainer/scripts/check-versions" ]; then
     sudo cp .devcontainer/scripts/check-versions /usr/local/bin/check-versions
     sudo chmod +x /usr/local/bin/check-versions
@@ -142,4 +144,19 @@ else
     echo "⚠️  check-versions script not found, will be available from workspace"
 fi
 
+# Install devcontainer-help
+if [ -f ".devcontainer/scripts/devcontainer-help" ]; then
+    sudo cp .devcontainer/scripts/devcontainer-help /usr/local/bin/devcontainer-help
+    sudo chmod +x /usr/local/bin/devcontainer-help
+    echo "✅ devcontainer-help script installed globally"
+elif [ -f "/workspaces/claude-codespace/.devcontainer/scripts/devcontainer-help" ]; then
+    sudo cp /workspaces/claude-codespace/.devcontainer/scripts/devcontainer-help /usr/local/bin/devcontainer-help
+    sudo chmod +x /usr/local/bin/devcontainer-help
+    echo "✅ devcontainer-help script installed globally"
+else
+    echo "⚠️  devcontainer-help script not found, will be available from workspace"
+fi
+
 echo "✅ Post-create setup completed successfully!"
+echo ""
+echo "📚 Run 'devcontainer-help' for comprehensive help and documentation"

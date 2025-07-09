@@ -12,7 +12,7 @@ Ready-to-use DevContainer setup optimized for [Claude Code](https://claude.ai/co
 2. **Fix Network Issues (If Needed)**
    ```bash
    # Run if you encounter SSL/network connectivity issues
-   ./scripts/fix-claude-ssl.sh
+   ..devcontainer/scripts/fix-claude-ssl.sh
    ```
 
 3. **Start Claude Code**
@@ -42,7 +42,7 @@ Ready-to-use DevContainer setup optimized for [Claude Code](https://claude.ai/co
 **Corporate VPN/Proxy/Firewall causing problems?** Run the automated fix:
 
 ```bash
-./scripts/fix-claude-ssl.sh
+..devcontainer/scripts/fix-claude-ssl.sh
 ```
 
 This script automatically detects and fixes SSL certificate issues, configures corporate proxy certificates, and validates the fix.
@@ -56,7 +56,7 @@ This script automatically detects and fixes SSL certificate issues, configures c
 ## 🔍 Troubleshooting
 
 ### Claude CLI Not Working?
-1. **First, try the network fix**: `./scripts/fix-claude-ssl.sh`
+1. **First, try the network fix**: `..devcontainer/scripts/fix-claude-ssl.sh`
 2. Rebuild container: `Dev Containers: Rebuild Container`
 3. Verify installation: `claude --version`
 
@@ -65,4 +65,4 @@ This script automatically detects and fixes SSL certificate issues, configures c
 check-versions
 ```
 
-Ready to start? Open in VS Code and run `./scripts/fix-claude-ssl.sh` if you encounter any network issues! 🎉
+Ready to start? Open in VS Code and run `..devcontainer/scripts/fix-claude-ssl.sh` if you encounter any network issues! 🎉
