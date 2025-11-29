@@ -7,7 +7,9 @@
     }
   },
   
-  "features": {},
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
   
   "customizations": {
     "vscode": {
@@ -46,8 +48,7 @@
         }
       },
       "extensions": [
-        "rooveterinaryinc.roo-cline",
-        "yzhang.markdown-all-in-one"
+        "anthropic.claude-code"
       ]
     }
   },
